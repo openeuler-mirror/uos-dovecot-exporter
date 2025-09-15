@@ -13,6 +13,9 @@ var (
 )
 
 func main() {
-	fmt.Print("Project initialization")
-	os.Exit(1)
+        err := Run(Name, Version)
+        if err != nil {
+                fmt.Fprintln(os.Stderr, err)
+                os.Exit(1)
+        }
 }
