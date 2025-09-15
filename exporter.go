@@ -3,10 +3,13 @@
 package main
 
 import (
+	"uos-dovecot-exporter/pkg/logger"
 	"github.com/sirupsen/logrus"
 )
 
 func Run(name string, version string) error {
+	logger.InitDefaultLog()
+
 	logrus.Info("init Run ....")
 	return nil
 }
