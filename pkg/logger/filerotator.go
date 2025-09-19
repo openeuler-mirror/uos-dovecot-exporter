@@ -23,6 +23,12 @@ func (fr *FileRotator) Write(p []byte) (n int, err error) {
         if err != nil {
                 return 0, err
         }
+	if fr.shouldRotate() {
+		err = fr.rotate()
+		if err != nil {
+			return 0, err
+		}
+	}
         n, err = fr.current.Write(p)
         if err != nil {
                 return n, err
@@ -54,3 +60,28 @@ func (fr *FileRotator) setupCurrent() error {
         return nil
 }
 
+func (fr *FileRotator) shouldRotate() bool {
+	if fr.size > fr.maxSize || time.Now().Sub(fr.startTime) > fr.maxAge {
+		return true
+	}
+	return false
+}
+
+
+func (fr *FileRotator) rotate() error {
+	var err error
+	if fr.current != nil {
+		err := fr.current.Close()
+		if err != nil {
+			return err
+		}
+	}
+
+	fr.current, err = os.Create(fr.basePath)
+	if err != nil {
+		return err
+	}
+	fr.size = 0
+	fr.startTime = time.Now()
+	return nil
+}
