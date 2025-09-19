@@ -7,6 +7,7 @@ import (
         "os"
 	"fmt"
         "time"
+	"uos-dovecot-exporter/pkg/utils"
 )
 
 type FileRotator struct {
@@ -77,6 +78,9 @@ func (fr *FileRotator) rotate() error {
 	}
 
 	for i := fr.keepFiles - 1; i > 0; i-- {
+		if !utils.FileExists(fr.getLogPath(i)) {
+			continue
+		}
 		if i == fr.keepFiles-1 {
 			err := os.Remove(fr.getLogPath(i))
 			if err != nil {
