@@ -7,11 +7,19 @@ import (
         formatter "gitee.com/weidongkl/logrus-formatter"
         "github.com/sirupsen/logrus"
         "strings"
+	"time"
 )
 
 type fileLogConfig struct {
         FileRotator *FileRotator
         level       string
+}
+
+func NewConfig(level, logPath string, maxSize int64, maxAge time.Duration) fileLogConfig {
+        return fileLogConfig{
+                level:       level,
+                FileRotator: NewFileRotator(logPath, maxSize, maxAge),
+        }
 }
 
 func Init(config fileLogConfig) {
