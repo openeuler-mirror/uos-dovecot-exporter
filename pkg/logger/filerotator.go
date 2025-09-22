@@ -7,7 +7,12 @@ import (
         "os"
 	"fmt"
         "time"
+	"path/filepath"
 	"uos-dovecot-exporter/pkg/utils"
+)
+
+var (
+        defaultMaxFiles = 5
 )
 
 type FileRotator struct {
@@ -18,6 +23,21 @@ type FileRotator struct {
         size      int64
         startTime time.Time
         keepFiles int
+}
+
+
+func NewFileRotator(basePath string, maxSize int64, maxAge time.Duration) *FileRotator {
+        dir := filepath.Dir(basePath)
+        _, err := os.Stat(dir)
+        if os.IsNotExist(err) {
+                os.MkdirAll(dir, 0755)
+        }
+        return &FileRotator{
+                basePath:  basePath,
+                maxSize:   maxSize,
+                maxAge:    maxAge,
+                keepFiles: defaultMaxFiles,
+        }
 }
 
 func (fr *FileRotator) Write(p []byte) (n int, err error) {
@@ -108,5 +128,12 @@ func (fr *FileRotator) rotate() error {
 
 func (fr *FileRotator) getLogPath(number int) string {
 	return fmt.Sprintf("%s.%d", fr.basePath, number)
+}
+
+func (fr *FileRotator) Close() error {
+        if fr.current != nil {
+                return fr.current.Close()
+        }
+        return nil
 }
 
