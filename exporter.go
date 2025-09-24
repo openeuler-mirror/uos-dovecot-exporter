@@ -12,6 +12,12 @@ func Run(name string, version string) error {
         logger.InitDefaultLog()
         s := server.NewServer(name, version)
 	s.PrintVersion()
+
+        err := s.SetUp()
+        if err != nil {
+                logrus.Errorf("SetUp error: %v", err)
+                return err
+        }
         go func() {
                 err := s.Run()
                 if err != nil {
@@ -27,4 +33,3 @@ func Run(name string, version string) error {
                 return s.Error
         }
 }
-
