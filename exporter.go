@@ -3,13 +3,23 @@
 package main
 
 import (
-	"uos-dovecot-exporter/pkg/logger"
-	"github.com/sirupsen/logrus"
+        "uos-dovecot-exporter/internal/server"
+        "uos-dovecot-exporter/pkg/logger"
+        "github.com/sirupsen/logrus"
 )
 
 func Run(name string, version string) error {
-	logger.InitDefaultLog()
+        logger.InitDefaultLog()
+        s := server.NewServer(name, version)
+        go func() {
+                err := s.Run()
+                if err != nil {
+                        logrus.Errorf("Run error: %v", err)
+                }
+                s.Exit()
+        }()
 
-	logrus.Info("init Run ....")
-	return nil
+        logrus.Info("init Run ....")
+        return nil
 }
+
