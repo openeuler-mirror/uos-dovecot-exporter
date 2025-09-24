@@ -3,10 +3,17 @@
 package server
 
 import (
+	"os"
         "sync"
+	"time"
+	"context"
         "net/http"
-        "github.com/sirupsen/logrus"
         "uos-dovecot-exporter/pkg/utils"
+	"uos-dovecot-exporter/pkg/logger"
+	"uos-dovecot-exporter/internal/exporter"
+	"gopkg.in/yaml.v2"
+        "github.com/sirupsen/logrus"
+	"github.com/alecthomas/kingpin"
         "github.com/prometheus/client_golang/prometheus"
 )
 
@@ -15,9 +22,11 @@ var defaultSeverVersion = "1.0.0"
 type Server struct {
         Name           string
         Version        string
+	CommonConfig   exporter.Config
         promReg        *prometheus.Registry
         ExitSignal     chan struct{}
         callback       sync.Once
+	Error          error
         server         *http.Server
 }
 
@@ -67,9 +76,52 @@ func (s *Server) Stop() {
         }
 }
 
+func (s *Server) SetUp() error {
+        defer func() {
+                if s.Error != nil {
+                        logrus.Errorf("SetUp error: %v", s.Error)
+                }
+        }()
+        err := s.parse()
+        if err != nil {
+                logrus.Errorf("Parsing command line arguments failed: %v", err)
+                return err
+        }
+        err = s.loadConfig()
+        if err != nil {
+                logrus.Errorf("Loading config file failed: %v", err)
+                return err
+        }
+        return nil
+}
+
+func (s *Server) loadConfig() error {
+        content, err := os.ReadFile(*exporter.Configfile)
+        if err != nil {
+                logrus.Errorf("Failed to read config file: %v", err)
+                logrus.Info("Use default config")
+                return nil
+        }
+        err = yaml.Unmarshal(content, &s.CommonConfig)
+        if err != nil {
+                logrus.Errorf("Failed to parse config file: %v", err)
+                logrus.Info("Use default config")
+                return nil
+        }
+        logrus.Infof("Loaded config file from: %s", *exporter.Configfile)
+        logrus.Info("CommonConfig file loaded")
+        return nil
+}
+
 func (s *Server) Exit() {
         s.callback.Do(func() {
                 close(s.ExitSignal)
         })
 }
+
+func (s *Server) parse() error {
+        kingpin.Parse()
+        return nil
+}
+
 
