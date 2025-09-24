@@ -14,6 +14,7 @@ import (
 	"gopkg.in/yaml.v2"
         "github.com/sirupsen/logrus"
 	"github.com/alecthomas/kingpin"
+	"github.com/dustin/go-humanize"
         "github.com/prometheus/client_golang/prometheus"
 )
 
@@ -92,6 +93,12 @@ func (s *Server) SetUp() error {
                 logrus.Errorf("Loading config file failed: %v", err)
                 return err
         }
+        err = s.setupLog()
+        if err != nil {
+                logrus.Errorf("SetUp error: %v", err)
+                return err
+        }
+
         return nil
 }
 
@@ -110,6 +117,17 @@ func (s *Server) loadConfig() error {
         }
         logrus.Infof("Loaded config file from: %s", *exporter.Configfile)
         logrus.Info("CommonConfig file loaded")
+        return nil
+}
+
+func (s *Server) setupLog() error {
+        size, err := humanize.ParseBytes(s.CommonConfig.Logging.MaxSize)
+        if err != nil {
+                logrus.Errorf("Parsing log size failed: %v", err)
+                return err
+        }
+        logConfig := logger.NewConfig(s.CommonConfig.Logging.Level, s.CommonConfig.Logging.LogPath, int64(size), s.CommonConfig.Logging.MaxAge)
+        logger.Init(logConfig)
         return nil
 }
 
