@@ -99,6 +99,12 @@ func (s *Server) SetUp() error {
                 return err
         }
 
+        err = s.setupHttpServer()
+        if err != nil {
+                logrus.Errorf("SetUp error: %v", err)
+                return err
+        }
+
         return nil
 }
 
@@ -130,6 +136,12 @@ func (s *Server) setupLog() error {
         logger.Init(logConfig)
         return nil
 }
+
+func (s *Server) setupHttpServer() error {
+        exporter.RegisterPrometheus(s.promReg)
+	return nil
+}
+
 
 func (s *Server) Exit() {
         s.callback.Do(func() {
