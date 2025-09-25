@@ -35,7 +35,7 @@ func Init(config fileLogConfig) {
         } else {
                 logrus.SetReportCaller(true)
                 logrus.SetFormatter(&formatter.Formatter{})
-                //logrus.SetOutput(config.FileRotator)
+                logrus.SetOutput(config.FileRotator)
         }
         switch level := strings.ToLower(config.level); level {
         case "debug":

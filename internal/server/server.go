@@ -4,10 +4,13 @@ package server
 
 import (
 	"os"
+	"fmt"
         "sync"
 	"time"
+	"bytes"
 	"context"
         "net/http"
+	"encoding/json"
         "uos-dovecot-exporter/pkg/utils"
 	"uos-dovecot-exporter/pkg/logger"
 	"uos-dovecot-exporter/internal/exporter"
@@ -137,8 +140,59 @@ func (s *Server) setupLog() error {
         return nil
 }
 
+func (s *Server) healthzHandler(w http.ResponseWriter, r *http.Request) {
+        // 构造健康检查响应
+        type healthzResponse struct {
+                Status  string `json:"status"`
+                Message string `json:"message"`
+        }
+        response := healthzResponse{
+                Status:  "ok",
+                Message: fmt.Sprintf("%s is running normally.", s.getName()),
+        }
+
+        // 设置响应头为 JSON 格式
+        w.Header().Set("Content-Type", "application/json")
+
+        // 使用缓冲区编码 JSON 数据，避免部分写入问题
+        buf := new(bytes.Buffer)
+        if err := json.NewEncoder(buf).Encode(response); err != nil {
+                // 记录详细的错误日志，包括请求上下文
+                logrus.WithFields(logrus.Fields{
+                        "method": r.Method,
+                        "path":   r.URL.Path,
+                        "error":  err,
+                }).Error("Failed to encode healthz response")
+                http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+                return
+        }
+
+        // 写入状态码并发送响应体
+        w.WriteHeader(http.StatusOK)
+        if _, err := buf.WriteTo(w); err != nil {
+                // 记录写入失败的日志
+                logrus.WithFields(logrus.Fields{
+                        "method": r.Method,
+                        "path":   r.URL.Path,
+                        "error":  err,
+                }).Error("Failed to write healthz response to client")
+        }
+}
+
+// 获取 Name 字段的线程安全方法
+func (s *Server) getName() string {
+        // s.mu.RLock()
+        // defer s.mu.RUnlock()
+        return s.Name
+}
+
 func (s *Server) setupHttpServer() error {
         exporter.RegisterPrometheus(s.promReg)
+        mux := http.NewServeMux()
+
+        // 注册健康检查接口
+        mux.HandleFunc("/healthz", s.healthzHandler)
+
 	return nil
 }
 
