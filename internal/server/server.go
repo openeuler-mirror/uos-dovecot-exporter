@@ -11,6 +11,7 @@ import (
 	"context"
         "net/http"
 	"encoding/json"
+	"uos-dovecot-exporter/config"
         "uos-dovecot-exporter/pkg/utils"
 	"uos-dovecot-exporter/pkg/logger"
 	"uos-dovecot-exporter/internal/exporter"
@@ -19,6 +20,7 @@ import (
 	"github.com/alecthomas/kingpin"
 	"github.com/dustin/go-humanize"
         "github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var defaultSeverVersion = "1.0.0"
@@ -26,11 +28,13 @@ var defaultSeverVersion = "1.0.0"
 type Server struct {
         Name           string
         Version        string
-	CommonConfig   exporter.Config
+        CommonConfig   exporter.Config
         promReg        *prometheus.Registry
+        handlers       []HandlerFunc
         ExitSignal     chan struct{}
+        Error          error
         callback       sync.Once
-	Error          error
+        ExporterConfig config.Settings
         server         *http.Server
 }
 
@@ -193,9 +197,19 @@ func (s *Server) setupHttpServer() error {
         // 注册健康检查接口
         mux.HandleFunc("/healthz", s.healthzHandler)
 
+        // 原有的路由注册逻辑
+        mux.Handle(s.CommonConfig.MetricsPath, s)
+
 	return nil
 }
 
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+        promhttp.HandlerFor(s.promReg, promhttp.HandlerOpts{}).ServeHTTP(w, r)
+}
+
+func (s *Server) Use(handlerFuncs ...HandlerFunc) {
+        s.handlers = append(s.handlers, handlerFuncs...)
+}
 
 func (s *Server) Exit() {
         s.callback.Do(func() {
