@@ -14,6 +14,7 @@ import (
 	"uos-dovecot-exporter/config"
         "uos-dovecot-exporter/pkg/utils"
 	"uos-dovecot-exporter/pkg/logger"
+	"uos-dovecot-exporter/pkg/ratelimit"
 	"uos-dovecot-exporter/internal/exporter"
 	"gopkg.in/yaml.v2"
         "github.com/sirupsen/logrus"
@@ -199,6 +200,13 @@ func (s *Server) setupHttpServer() error {
 
         // 原有的路由注册逻辑
         mux.Handle(s.CommonConfig.MetricsPath, s)
+        if *UseRatelimit {
+                rateLimiter, err := ratelimit.NewRateLimiter(*rateLimitInterval, *rateLimitSize)
+                if err != nil {
+                        logrus.Errorf("ratelimit middleware init error: %v", err)
+                }
+                s.Use(Ratelimit(rateLimiter))
+        }
 
 	return nil
 }
