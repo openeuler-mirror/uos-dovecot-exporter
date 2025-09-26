@@ -207,7 +207,14 @@ func (s *Server) setupHttpServer() error {
                 }
                 s.Use(Ratelimit(rateLimiter))
         }
-
+        addr := fmt.Sprintf("%s:%d", s.CommonConfig.Address, s.CommonConfig.Port)
+        schema := "http"
+        fmt.Fprintf(os.Stdout, "Listening and serving %s on [%s://%s]\n", s.Name, schema, addr)
+        server := &http.Server{
+                Addr:    addr,
+                Handler: mux,
+        }
+	s.server = server
 	return nil
 }
 
